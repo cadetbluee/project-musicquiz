@@ -21,6 +21,7 @@ export default function RoomPage() {
   const [nickname, setNickname] = useState("");
   const [isHost, setIsHost] = useState(false);
   const isGameStarting = useRef(false);
+  const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     const savedNickname = sessionStorage.getItem("nickname") || "";
     const savedIsHost = sessionStorage.getItem("isHost") === "true";
@@ -39,6 +40,7 @@ export default function RoomPage() {
 
     socket.on("room:update", ({ players }: { players: Player[] }) => {
       setPlayers(players);
+      setIsLoading(false);
       const savedNickname = sessionStorage.getItem("nickname") || "";
       const me = players.find((p) => p.nickname === savedNickname);
       if (me) setIsHost(me.isHost);
@@ -127,32 +129,36 @@ export default function RoomPage() {
           <h2 className="text-gray-400 text-sm mb-4">
             참가자 {players.length}명
           </h2>
-          <div className="space-y-3">
-            {players.map((player) => (
-              <div
-                key={player.socketId}
-                className="flex items-center gap-3 bg-gray-800 rounded-xl px-4 py-3"
-              >
-                {/* 아바타 */}
-                <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                  {player.nickname[0]?.toUpperCase()}
-                </div>
-                <span className="text-white font-medium flex-1">
-                  {player.nickname}
-                </span>
-                {/* 방장 배지 */}
-                {player.isHost && (
-                  <span className="text-xs bg-yellow-500 text-yellow-950 font-bold px-2 py-0.5 rounded-full">
-                    방장
+          {isLoading ? (
+            // 로딩 중
+            <div className="flex items-center justify-center py-8">
+              <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {players.map((player) => (
+                <div
+                  key={player.socketId}
+                  className="flex items-center gap-3 bg-gray-800 rounded-xl px-4 py-3"
+                >
+                  <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                    {player.nickname[0]?.toUpperCase()}
+                  </div>
+                  <span className="text-white font-medium flex-1">
+                    {player.nickname}
                   </span>
-                )}
-                {/* 본인 표시 */}
-                {player.nickname === nickname && (
-                  <span className="text-xs text-gray-500">나</span>
-                )}
-              </div>
-            ))}
-          </div>
+                  {player.isHost && (
+                    <span className="text-xs bg-yellow-500 text-yellow-950 font-bold px-2 py-0.5 rounded-full">
+                      방장
+                    </span>
+                  )}
+                  {player.nickname === nickname && (
+                    <span className="text-xs text-gray-500">나</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 게임 시작 버튼 (방장만) */}
