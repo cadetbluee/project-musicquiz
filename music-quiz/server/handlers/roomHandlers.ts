@@ -37,6 +37,7 @@ export function roomHandlers(io: Server, socket: Socket) {
     console.log(`방 생성: ${code} / 방장: ${nickname}`);
   });
   socket.on("room:leave", ({ roomCode }) => {
+    console.log(`room:leave 호출: ${roomCode}`);
     const room = rooms.get(roomCode);
     if (!room) return;
 

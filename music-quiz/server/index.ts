@@ -18,16 +18,9 @@ app.use(
   })
 );
 app.use(express.json());
-const allowedOrigins = [
-  "https://cadetbluee-project-musicquiz.vercel.app",
-  "https://project-musicquiz.vercel.app",
-  "http://127.0.0.1:3000",
-  "http://localhost:3000",
-  /https:\/\/.*\.vercel\.app$/,
-];
 
 console.log("CLIENT_URL:", process.env.CLIENT_URL);
-console.log("허용된 origins:", allowedOrigins); // origin → allowedOrigins
+
 // Express 위에 Socket.io 서버를 얹음
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
