@@ -29,7 +29,6 @@ export default function RoomPage() {
     setNickname(savedNickname);
     setIsHost(savedIsHost);
 
-    // 새로 연결하지 않고 기존 소켓 재사용
     const socket = getSocket();
     setSocket(socket);
 
@@ -38,17 +37,11 @@ export default function RoomPage() {
       router.push(`/game/${code}`);
     });
 
-    // 이미 연결된 소켓이니까 바로 이벤트만 등록
-    // 방장은 이미 방에 있으니 rejoin 불필요
-    // 참가자는 이미 room:join 완료된 상태
     socket.on("room:update", ({ players }: { players: Player[] }) => {
       setPlayers(players);
-      // 내 isHost 상태도 업데이트
       const savedNickname = sessionStorage.getItem("nickname") || "";
       const me = players.find((p) => p.nickname === savedNickname);
-      if (me) {
-        setIsHost(me.isHost);
-      }
+      if (me) setIsHost(me.isHost);
     });
 
     socket.on("room:error", ({ message }: { message: string }) => {
@@ -56,15 +49,37 @@ export default function RoomPage() {
       router.push("/");
     });
 
-    // 현재 방 인원 요청
-    socket.emit("room:getPlayers", { roomCode: code });
+    socket.on("room:joined", ({ playerId }: { playerId: string }) => {
+      // 재연결 시 새 playerId 업데이트
+      sessionStorage.setItem("playerId", playerId);
+    });
+
+    // 소켓이 연결됐을 때 room:join 보내기
+    if (socket.connected) {
+      // 이미 연결된 경우 바로 전송
+      socket.emit("room:join", {
+        roomCode: code,
+        nickname: savedNickname,
+        playerId: savedPlayerId,
+      });
+    } else {
+      // 연결 중인 경우 연결 완료 후 전송
+      socket.connect();
+      socket.on("connect", () => {
+        socket.emit("room:join", {
+          roomCode: code,
+          nickname: savedNickname,
+          playerId: savedPlayerId,
+        });
+      });
+    }
 
     return () => {
-      // 페이지 떠날 때 (뒤로가기, 홈으로, 탭 닫기 모두 해당)
       socket.off("room:update");
       socket.off("room:error");
+      socket.off("room:joined");
+      socket.off("connect");
 
-      // 게임 시작이 아닐 때만 방 나가기
       if (!isGameStarting.current) {
         socket.emit("room:leave", { roomCode: code });
         resetSocket();
