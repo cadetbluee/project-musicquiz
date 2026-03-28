@@ -140,28 +140,33 @@ export function roomHandlers(io: Server, socket: Socket) {
       if (index === -1) return;
 
       const player = room.players[index];
+      const wasHost = player.isHost;
+      const playerId = player.playerId;
+
       console.log(
         `disconnect 감지: ${player.nickname} / socketId: ${socket.id}`
       );
-
-      const wasHost = room.players[index].isHost;
 
       setTimeout(() => {
         const currentRoom = rooms.get(code);
         if (!currentRoom) return;
 
-        const currentPlayer = currentRoom.players[index];
-        console.log(
-          `5초 후 확인 - 현재 socketId: ${currentPlayer?.socketId} / 끊긴 socketId: ${socket.id}`
+        // playerId로 현재 플레이어 찾기
+        const currentPlayer = currentRoom.players.find(
+          (p) => p.playerId === playerId
         );
 
+        // 재연결됐으면 socketId가 바뀌어 있음 → 삭제 안 함
         if (!currentPlayer || currentPlayer.socketId !== socket.id) {
-          console.log("재연결 감지 → 삭제 안 함");
+          console.log(`재연결 감지 → ${player.nickname} 유지`);
           return;
         }
 
         console.log(`${player.nickname} 방에서 제거`);
-        currentRoom.players.splice(index, 1);
+        const currentIndex = currentRoom.players.findIndex(
+          (p) => p.playerId === playerId
+        );
+        currentRoom.players.splice(currentIndex, 1);
 
         if (currentRoom.players.length === 0) {
           rooms.delete(code);
