@@ -10,16 +10,21 @@ import path from "path";
 dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
 
 const app = express();
-
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000"
 // Next.js(3000)에서 오는 요청 허용
-app.use(cors({ origin: ["http://127.0.0.1:3000", "http://localhost:3000"] }));
+app.use(cors({
+  origin: [CLIENT_URL, "http://127.0.0.1:3000", "http://localhost:3000"]
+}))
 app.use(express.json());
 
 // Express 위에 Socket.io 서버를 얹음
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
-  cors: { origin: ["http://127.0.0.1:3000", "http://localhost:3000"] },
-});
+  cors: {
+    origin: [CLIENT_URL, "http://127.0.0.1:3000", "http://localhost:3000"]
+  }
+})
+
 
 // 클라이언트가 접속했을 때
 io.on("connection", (socket) => {
