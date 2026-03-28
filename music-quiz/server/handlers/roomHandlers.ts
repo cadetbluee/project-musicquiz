@@ -64,33 +64,42 @@ export function roomHandlers(io: Server, socket: Socket) {
   socket.on("room:join", ({ roomCode, nickname, playerId }) => {
     const room = rooms.get(roomCode);
 
-    // 존재하지 않는 방
     if (!room) {
       socket.emit("room:error", { message: "존재하지 않는 방이에요" });
       return;
     }
 
-    // 이미 게임 중인 방
     if (room.isPlaying) {
       socket.emit("room:error", { message: "이미 게임이 시작된 방이에요" });
       return;
     }
-    // playerId로 기존 플레이어 확인 (재연결 케이스)
-    const existing = room.players.find((p) => p.playerId === playerId);
-    if (existing) {
-      // 재연결 — socketId만 업데이트
-      existing.socketId = socket.id;
-      socket.join(roomCode);
-      io.to(roomCode).emit("room:update", { players: room.players });
-      return;
+
+    // playerId로 기존 플레이어 확인 (재연결 or 새로고침)
+    if (playerId) {
+      const existing = room.players.find((p) => p.playerId === playerId);
+      if (existing) {
+        // 재연결 — socketId만 업데이트
+        existing.socketId = socket.id;
+        socket.join(roomCode);
+        console.log(`재연결: ${roomCode} / 닉네임: ${existing.nickname}`);
+        // 본인한테 playerId 다시 전달
+        socket.emit("room:joined", { playerId: existing.playerId });
+        io.to(roomCode).emit("room:update", { players: room.players });
+        return;
+      }
+
+      // playerId는 있는데 방에 없으면 → 이미 제거됨
+      // 닉네임 중복 체크 후 새로 입장
     }
-    // 닉네임 중복 체크 (진짜 다른 사람)
+
+    // 닉네임 중복 체크
     const nicknameExists = room.players.some((p) => p.nickname === nickname);
     if (nicknameExists) {
       socket.emit("room:error", { message: "이미 사용 중인 닉네임이에요" });
       return;
     }
-    // 새 플레이어 — 새 playerId 발급
+
+    // 새 플레이어 추가
     const newPlayerId = generatePlayerId();
     const newPlayer: Player = {
       playerId: newPlayerId,
@@ -101,9 +110,8 @@ export function roomHandlers(io: Server, socket: Socket) {
     };
     room.players.push(newPlayer);
     socket.join(roomCode);
-    // 입장한 본인한테 playerId 전달
+
     socket.emit("room:joined", { playerId: newPlayerId });
-    // 방 전체 인원한테 업데이트된 플레이어 목록 전송
     io.to(roomCode).emit("room:update", { players: room.players });
     console.log(`방 입장: ${roomCode} / 닉네임: ${nickname}`);
   });
@@ -175,7 +183,7 @@ export function roomHandlers(io: Server, socket: Socket) {
 
         if (wasHost) currentRoom.players[0].isHost = true;
         io.to(code).emit("room:update", { players: currentRoom.players });
-      }, 5000);
+      }, 10000);
     });
   });
 }
