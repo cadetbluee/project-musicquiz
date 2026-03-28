@@ -6,7 +6,9 @@
     "esModuleInterop": true,
     "strict": false,
     "skipLibCheck": true,
-    "sourceMap": true,"outDir": "./dist"    
+    "sourceMap": true,
+    "outDir": "./dist",
+    "ignoreDeprecations": "5.0"
   },
   "include": ["./**/*"],
   "exclude": ["node_modules"]
